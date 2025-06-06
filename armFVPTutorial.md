@@ -32,7 +32,6 @@ cd /executorch/
 
 ```
 python3 -m venv .venv && source .venv/bin/activate && pip install --upgrade pip
-./install_executorch.sh
 git submodule sync
 git submodule update --init --recursive
 mkdir cmake-out && cd cmake-out && cmake .. && cd ../
@@ -144,11 +143,51 @@ add_arm_delegate_ethos-u55-128.pte
 softmax_arm_ethos-u55-128.pte
 ```
 
-Run with:
+## Run the models
+
+### Running the add model
 
 ```
 ./examples/arm/run.sh --model_name=add --target=ethos-u85-128
 ```
 
+Produces the following output:
 
+```
+I [executorch:arm_executor_runner.cpp:675] Model executed successfully.
+I [executorch:arm_executor_runner.cpp:679] 1 outputs:
+Output[0][0]: (int) 2
+Output[0][1]: (int) 2
+Output[0][2]: (int) 2
+Output[0][3]: (int) 2
+Output[0][4]: (int) 2
+I [executorch:arm_executor_runner.cpp:783] Program complete, exiting.
+I [executorch:arm_executor_runner.cpp:787]
+Info: /OSCI/SystemC: Simulation stopped by user.
+[backends/arm/scripts/run_fvp.sh] Simulation complete, 0
+Checking for problems in log:
+No problems found!
++ set +x
+```
 
+### Running the softmax model:
+
+```
+./examples/arm/run.sh --model_name=softmax --target=ethos-u85-128
+```
+
+```
+I [executorch:arm_executor_runner.cpp:675] Model executed successfully.
+I [executorch:arm_executor_runner.cpp:679] 1 outputs:
+Output[0][0]: (float) 0.225432
+Output[0][1]: (float) 0.225432
+Output[0][2]: (float) 0.225432
+Output[0][3]: (float) 0.225432
+I [executorch:arm_executor_runner.cpp:783] Program complete, exiting.
+I [executorch:arm_executor_runner.cpp:787]
+Info: /OSCI/SystemC: Simulation stopped by user.
+[backends/arm/scripts/run_fvp.sh] Simulation complete, 0
+Checking for problems in log:
+No problems found!
++ set +x
+```
