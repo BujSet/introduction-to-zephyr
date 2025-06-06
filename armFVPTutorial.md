@@ -13,6 +13,41 @@ docker build -t env-zephyr-armfvp -f Dockerfile.armfvp .
 docker run --rm -it --entrypoint /bin/bash  -p 3333:3333 -p 2222:22 -p 8800:8800 -v "$(pwd)"/workspace:/workspace -w /workspace env-zephyr-armfvp
 ```
 
+# Building Executorch inside the Docker image
+
+```
+cd /executorch/
+```
+
+```
+python3 -m venv .venv && source .venv/bin/activate && pip install --upgrade pip
+./install_executorch.sh --clean
+git submodule sync
+git submodule update --init --recursive
+mkdir cmake-out && cd cmake-out && cmake .. && cd ../
+cmake --build cmake-out -j9
+```
+
+## (Optional) Test your executorch installation:
+
+```
+python -m examples.portable.scripts.export --model_name="add"
+./cmake-out/executor_runner --model_path add.pte
+```
+
+Which should produce: 
+
+```
+I 00:00:00.000526 executorch:executor_runner.cpp:82] Model file add.pte is loaded.
+I 00:00:00.000595 executorch:executor_runner.cpp:91] Using method forward
+I 00:00:00.000612 executorch:executor_runner.cpp:138] Setting up planned buffer 0, size 48.
+I 00:00:00.000669 executorch:executor_runner.cpp:161] Method loaded.
+I 00:00:00.000685 executorch:executor_runner.cpp:171] Inputs prepared.
+I 00:00:00.000764 executorch:executor_runner.cpp:180] Model executed successfully.
+I 00:00:00.000770 executorch:executor_runner.cpp:184] 1 outputs:
+Output 0: tensor(sizes=[1], [2.])
+```
+
 # Using arm FVP in the Docker image
 
 

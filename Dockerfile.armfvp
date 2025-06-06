@@ -207,14 +207,17 @@ RUN cd /tmp && \
 
 # Install executorch dependencies
 RUN  python3 -m pip install torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0
-#RUN cd /workspace && git clone -b release/0.6 https://github.com/pytorch/executorch.git && \
-#    cd executorch && \
-#    python3 -m venv .venv && \
-#    source .venv/bin/activate && \
-#    python3 -m pip install --upgrade pip && \
-#    python3 -m pip install torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 --extra-index-url https://download.pytorch.org/whl/test/cpu && \
-##    python3 -m pip install torch==2.8.0.dev20250325 torchvision==0.22.0.dev20250325 torchaudio==2.6.0.dev20250325 --extra-index-url https://download.pytorch.org/whl/nightly/cpu && \
-#    ./install_executorch.sh
+RUN python3 -m pip install zstd pyyaml
+RUN git clone -b release/0.6 https://github.com/pytorch/executorch.git && \
+    cd executorch && \
+    python3 -m venv .venv && \
+    source .venv/bin/activate && \
+    python3 -m pip install --upgrade pip && \
+    python3 -m pip install torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 --extra-index-url https://download.pytorch.org/whl/test/cpu && \
+    python3 -m pip install zstd && \
+    python3 -m pip install pyyaml && \
+#    python3 -m pip install torch==2.8.0.dev20250325 torchvision==0.22.0.dev20250325 torchaudio==2.6.0.dev20250325 --extra-index-url https://download.pytorch.org/whl/nightly/cpu && \
+    ./install_executorch.sh --clean
 
 # Setup arm FVP
 #RUN cd executorch && \
