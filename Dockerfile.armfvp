@@ -68,6 +68,7 @@ RUN apt-get -y update && \
         wget \
         curl \
         python3 \
+        python3-dev \
         python3-pip \
         python3-venv \
         xz-utils \
@@ -203,13 +204,22 @@ RUN cd /tmp && \
     code-server --install-extension hexeditor.vsix && \
     code-server --install-extension nordic-semiconductor.nrf-devicetree.vsix
 
-# Install executorch
 
-RUN git clone -b release/0.6 https://github.com/pytorch/executorch.git && \
-    cd executorch && \
-    python3 -m venv .venv && \
-    source .venv/bin/activate && \
-    pip install --upgrade pip
+# Install executorch dependencies
+RUN  python3 -m pip install torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0
+#RUN cd /workspace && git clone -b release/0.6 https://github.com/pytorch/executorch.git && \
+#    cd executorch && \
+#    python3 -m venv .venv && \
+#    source .venv/bin/activate && \
+#    python3 -m pip install --upgrade pip && \
+#    python3 -m pip install torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 --extra-index-url https://download.pytorch.org/whl/test/cpu && \
+##    python3 -m pip install torch==2.8.0.dev20250325 torchvision==0.22.0.dev20250325 torchaudio==2.6.0.dev20250325 --extra-index-url https://download.pytorch.org/whl/nightly/cpu && \
+#    ./install_executorch.sh
+
+# Setup arm FVP
+#RUN cd executorch && \
+#    source  examples/arm/ethos-u-scratch/setup_path.sh && \
+#    ./examples/arm/setup.sh --i-agree-to-the-contained-eula
 
 # Clean up
 RUN cd /tmp && \

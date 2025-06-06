@@ -4,3 +4,5 @@
 /zephyr
 /.west
 /modules
+/workspace/executorch
+build.log
