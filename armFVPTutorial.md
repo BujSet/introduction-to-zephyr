@@ -1,5 +1,16 @@
 # Intstruction for Following the Executorch arm-ethos-u FVP Tutorial
 
+# Hardware Requirements:
+
+This tutorial was written based running on a Windows machine using WSL2. You need to provision at least 16GB of memory for WSL to be able to run the FVP simulator.
+
+## Checking WSL Memory Provision
+
+TODO steps here
+
+check if .wslconfig file exists,
+
+if not create it and set memory to 16GB
 
 # Build Docker Image:
 
@@ -21,7 +32,7 @@ cd /executorch/
 
 ```
 python3 -m venv .venv && source .venv/bin/activate && pip install --upgrade pip
-./install_executorch.sh --clean
+./install_executorch.sh
 git submodule sync
 git submodule update --init --recursive
 mkdir cmake-out && cd cmake-out && cmake .. && cd ../
@@ -30,72 +41,79 @@ cmake --build cmake-out -j9
 
 ## (Optional) Test your executorch installation:
 
+Generate the example pte file:
 ```
 python -m examples.portable.scripts.export --model_name="add"
+```
+
+Should see output that looks like:
+
+```
+[INFO 2025-06-06 18:57:58,011 utils.py:50] Core ATen graph:
+graph():
+    %x : [num_users=1] = placeholder[target=x]
+    %y : [num_users=1] = placeholder[target=y]
+    %add : [num_users=1] = call_function[target=torch.ops.aten.add.Tensor](args = (%x, %y), kwargs = {})
+    return (add,)
+[INFO 2025-06-06 18:57:58,137 utils.py:70] Exported graph:
+ExportedProgram:
+    class GraphModule(torch.nn.Module):
+        def forward(self, x: "f32[1]", y: "f32[1]"):
+             # File: /executorch/examples/models/toy_model/model.py:47 in forward, code: z = x + y
+            aten_add_tensor: "f32[1]" = executorch_exir_dialects_edge__ops_aten_add_Tensor(x, y);  x = y = None
+            return (aten_add_tensor,)
+
+Graph signature: ExportGraphSignature(input_specs=[InputSpec(kind=<InputKind.USER_INPUT: 1>, arg=TensorArgument(name='x'), target=None, persistent=None), InputSpec(kind=<InputKind.USER_INPUT: 1>, arg=TensorArgument(name='y'), target=None, persistent=None)], output_specs=[OutputSpec(kind=<OutputKind.USER_OUTPUT: 1>, arg=TensorArgument(name='aten_add_tensor'), target=None)])
+Range constraints: {}
+
+[INFO 2025-06-06 18:57:58,180 utils.py:141] Saved exported program to ./add.pte
+```
+
+and `add.pte` will be created under `/executorch/`
+
+```
 ./cmake-out/executor_runner --model_path add.pte
 ```
 
 Which should produce: 
 
 ```
-I 00:00:00.000526 executorch:executor_runner.cpp:82] Model file add.pte is loaded.
-I 00:00:00.000595 executorch:executor_runner.cpp:91] Using method forward
-I 00:00:00.000612 executorch:executor_runner.cpp:138] Setting up planned buffer 0, size 48.
-I 00:00:00.000669 executorch:executor_runner.cpp:161] Method loaded.
-I 00:00:00.000685 executorch:executor_runner.cpp:171] Inputs prepared.
-I 00:00:00.000764 executorch:executor_runner.cpp:180] Model executed successfully.
-I 00:00:00.000770 executorch:executor_runner.cpp:184] 1 outputs:
+I 00:00:00.003987 executorch:executor_runner.cpp:166] Model file add.pte is loaded.
+I 00:00:00.004058 executorch:executor_runner.cpp:175] Using method forward
+I 00:00:00.004429 executorch:executor_runner.cpp:226] Setting up planned buffer 0, size 48.
+I 00:00:00.005262 executorch:executor_runner.cpp:251] Method loaded.
+I 00:00:00.006576 executorch:executor_runner.cpp:284] Model executed successfully 1 time(s) in 0.691078 ms.
+I 00:00:00.006604 executorch:executor_runner.cpp:293] 1 outputs:
 Output 0: tensor(sizes=[1], [2.])
 ```
 
-# Using arm FVP in the Docker image
-
-
-## Preliminaries
-
-On start, you should be prompted with something that looks like:
+# Setup  arm FVP in the Docker image
 
 ```
-(venv) root@7c26f549e7f3:/workspace#
+cd /executorch
 ```
 
-Running an `ls` command should show you the following output:
-
-```
-apps  boards  executorch  modules  west.yml
-```
-
-Now, you can run the following to setup the paths for the tutorial:
-
-```
-source  executorch/examples/arm/ethos-u-scratch/setup_path.sh
-cd executorch/
-```
-
-Since we are developing in a Docker contianer, you'll need to specify you github credentials before running the setup script:
-
-```
-git config --global user.email "you@example.com"
-git config --global user.name "Your Name"
-```
-
-## Running the FVP Setup Script
-
-After that, you should finally be able to run the setup command:
+Now run
 
 ```
 ./examples/arm/setup.sh --i-agree-to-the-contained-eula
 ```
 
-This will likely take quite a while to run... (mayb 15-20 min)
+This will fail with the error below:
 
-For some reason, this produces a package dependency error, but is resolved if you just re-run:
+```
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+tosa-tools 0.80.2.dev1+g70ed0b4 requires jsonschema, which is not installed.
+tosa-tools 0.80.2.dev1+g70ed0b4 requires flatbuffers==23.5.26, but you have flatbuffers 24.12.23 which is incompatible.
+tosa-tools 0.80.2.dev1+g70ed0b4 requires numpy<2, but you have numpy 2.2.6 which is incompatible.
+```
+
+But now the path setup script is available, so you can run the follwing commands to comeplete the setup process:
 
 ```
 source  examples/arm/ethos-u-scratch/setup_path.sh
 ./examples/arm/setup.sh --i-agree-to-the-contained-eula
 ```
-
 ## Verify Arm toolcahin:
 
 Run
@@ -107,10 +125,30 @@ which arm-none-eabi-gcc
 which should output something like:
 
 ```
-/workspace/executorch/examples/arm/ethos-u-scratch/arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi/bin/arm-none-eabi-gcc
+/executorch/examples/arm/ethos-u-scratch/arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi/bin/arm-none-eabi-gcc
 ```
 
+## Build the models from the tutorial:
 
+```
+python3 -m examples.arm.aot_arm_compiler --model_name="softmax"
+python3 -m examples.arm.aot_arm_compiler --model_name="add" --delegate
+```
+
+There is some error with the quatization flag, for now we'll not use that model, but it's a future TODO: `python3 -m examples.arm.aot_arm_compiler --model_name="mv2" --delegate --quantize`
+
+You should now see the following `.pte` files in the `/executorch/` directory:
+
+```
+add_arm_delegate_ethos-u55-128.pte
+softmax_arm_ethos-u55-128.pte
+```
+
+Run with:
+
+```
+./examples/arm/run.sh --model_name=add --target=ethos-u85-128
+```
 
 
 
