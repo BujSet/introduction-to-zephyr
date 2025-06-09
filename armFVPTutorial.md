@@ -12,11 +12,22 @@ check if .wslconfig file exists,
 
 if not create it and set memory to 16GB
 
-# Build Docker Image:
+# Accesssing Docker Image:
+
+The docker image can be accessed by either building the image directly from the Dockerfile source file, or by pulling the image down (recommended). In either case, the docker image requires *at least* 7 GB of disk space. If using windows, it's highly recommended to manage your docker artifacts with Docker Desktop.
+
+## Building the image locally
 
 ```
-docker build -t env-zephyr-armfvp -f Dockerfile.armfvp .
+docker build -t env-zephyr-armfvp:v2 -f Dockerfile.armfvp_zephyr .
 ```
+
+## (Recommendde) Pulling the image from Docker hub
+
+```
+docker pull rselagam/env-zephyr-armfvp:v2
+```
+
 
 # Run docker image interactivately
 
