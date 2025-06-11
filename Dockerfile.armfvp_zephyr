@@ -6,7 +6,7 @@ ARG VIRTUAL_ENV
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get -y update && \
-	apt-get install --no-install-recommends -y \
+        apt-get install --no-install-recommends -y \
         dos2unix \
         ca-certificates \
         file \
@@ -29,6 +29,20 @@ RUN apt-get -y update && \
         mc \
         openssh-server
 
+# Install additional required software for Zephyr
+RUN apt install --no-install-recommends -y ccache \
+    dfu-util \
+    python3-setuptools \
+    python3-tk \
+    python3-wheel \
+    make \
+    gcc \
+    gcc-multilib \
+    g++-multilib \
+    libsdl2-dev \
+    libmagic1 \
+    xterm
+
 ENV VIRTUAL_ENV=${VIRTUAL_ENV}
 RUN python3 -m venv ${VIRTUAL_ENV}
 ENV PATH="${VIRTUAL_ENV}/bin:$PATH"
@@ -38,12 +52,71 @@ RUN python3 -m pip install --no-cache-dir west
 
 # Clean up stale packages
 RUN apt-get clean -y && \
-	apt-get autoremove --purge -y && \
-	rm -rf /var/lib/apt/lists/*
+        apt-get autoremove --purge -y && \
+        rm -rf /var/lib/apt/lists/*
 
-RUN git clone -b release/0.6 https://github.com/pytorch/executorch.git && \
+
+# Create a non-root user and group
+RUN useradd -d /home/zephyruser -m -s /bin/bash zephyruser
+# Switch to the non-root user
+USER zephyruser
+
+# Download and install executorch
+RUN cd /home/zephyruser && git clone https://github.com/BujSet/executorch.git && \
     cd executorch && \
     python3 -m venv .venv && \
     source .venv/bin/activate && \
     python3 -m pip install --upgrade pip && \
-    ./install_executorch.sh
+    ./install_executorch.sh && \
+    git submodule sync && \
+    git submodule update --init --recursive && \
+    mkdir cmake-out && cd cmake-out && cmake .. && cd ../ && \
+    cmake --build cmake-out -j9
+
+# kitware script must be run as root user for some reason
+USER root
+RUN cd /home/zephyruser/ && wget https://apt.kitware.com/kitware-archive.sh && \
+    chmod +x kitware-archive.sh && \
+    ./kitware-archive.sh
+
+USER zephyruser
+## Install arm FVP, run commands as root but later need them be run by user mode... TODO need to fix this
+
+#RUN cd /home/zephyruser/executorch && \
+#    source .venv/bin/activate && \
+#    ./examples/arm/setup.sh --i-agree-to-the-contained-eula && \
+#    source  examples/arm/ethos-u-scratch/setup_path.sh && \
+#    ./examples/arm/setup.sh --i-agree-to-the-contained-eula
+
+# Corstone executable must be built and non-root users
+
+# Install required software to build zephyr
+#RUN cd /home/zephyruser/ && wget https://apt.kitware.com/kitware-archive.sh && \
+#    chmod +x kitware-archive.sh && \
+#    ./kitware-archive.sh && \
+#    mkdir zephyrproject && \
+#    python3 -m venv zephyrproject/.venv && \
+#    source zephyrproject/.venv/bin/activate && \
+#    pip install west && \
+#    west init zephyrproject && \
+#    cd zephyrproject && \
+#    west update && \
+#    west zephyr-export && \
+#    pip install -r zephyr/scripts/requirements.txt && \
+#    cd /home/zephyruser/ && \
+#    wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.0/zephyr-sdk-0.16.0_linux-x86_64.tar.xz && \
+#    tar -xf zephyr-sdk-0.16.0_linux-x86_64.tar.xz && \
+#    cd zephyr-sdk-0.16.0 && \
+#    ./setup.sh -c -t arm-zephyr-eabi # && \
+#    cd /home/zephyruser/executorch && \
+#    ./examples/arm/setup.sh --i-agree-to-the-contained-eula && \
+#    source  examples/arm/ethos-u-scratch/setup_path.sh && \
+#    ./examples/arm/setup.sh --i-agree-to-the-contained-eula
+
+#&& \
+#    cd /home/zephyruser/zephyrproject/zephyr && \
+#    west build -p auto -b mps3/corstone300/an547 samples/hello_world
+
+ENV ZEPHYR_TOOLCHAIN_VARIANT=zephyr
+ENV ZEPHYR_SDK_INSTALL_DIR=/home/zephyruser/zephyr-sdk-0.16.0
+USER zephyruser

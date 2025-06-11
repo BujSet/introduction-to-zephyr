@@ -1,16 +1,9 @@
-# Intstruction for Following the Executorch arm-ethos-u FVP Tutorial
+# Intstruction for Following the Build and run Zephyr applications Tutorial in arm FVP simulator with executorch
+https://learn.arm.com/learning-paths/embedded-and-microcontrollers/zephyr/zephyr/
 
 # Hardware Requirements:
 
-This tutorial was written based running on a Windows machine using WSL2. You need to provision at least 16GB of memory for WSL to be able to run the FVP simulator.
-
-## Checking WSL Memory Provision
-
-TODO steps here
-
-check if .wslconfig file exists,
-
-if not create it and set memory to 16GB
+This tutorial was written based running on a Windows machine, but should work for others.
 
 # Accesssing Docker Image:
 
@@ -19,44 +12,41 @@ The docker image can be accessed by either building the image directly from the 
 ## Building the image locally
 
 ```
-docker build -t env-zephyr-armfvp:v2 -f Dockerfile.armfvp .
+docker build -t env-zephyr-armfvp:v3 -f Dockerfile.armfvp_zephyr .
 ```
 
 ## (Recommendde) Pulling the image from Docker hub
 
 ```
-docker pull rselagam/env-zephyr-armfvp:v2
+docker pull rselagam/env-zephyr-armfvp:v3
 ```
 
 
 # Run docker image interactivately
 
-```
-docker run --rm -it --entrypoint /bin/bash  -p 3333:3333 -p 2222:22 -p 8800:8800 -v "$(pwd)"/workspace:/workspace -w /workspace env-zephyr-armfvp:v2
-```
 
-# Building Executorch inside the Docker image
+## Linux/macOS
 
 ```
-cd /executorch/
+docker run --rm -it --entrypoint /bin/bash  -p 3333:3333 -p 2222:22 -p 8800:8800 -v "$(pwd)"/workspace:/workspace -w /workspace rselagam/env-zephyr-armfvp:v3
 ```
 
+## Windows (PowerShell)
+
 ```
-python3 -m venv .venv && source .venv/bin/activate && pip install --upgrade pip
-git submodule sync
-git submodule update --init --recursive
-mkdir cmake-out && cd cmake-out && cmake .. && cd ../
-cmake --build cmake-out -j9
+docker run --rm -it --entrypoint /bin/bash  -p 3333:3333 -p 2222:22 -p 8800:8800 -v "${PWD}\workspace:/workspace" -w /workspace rselagam/env-zephyr-armfvp:v3
 ```
 
 ## (Optional) Test your executorch installation:
 
 Generate the example pte file:
 ```
+cd /home/zephyruser/executorch
+source .venv/bin/activate
 python -m examples.portable.scripts.export --model_name="add"
 ```
 
-Should see output that looks like:
+You should see the following output:
 
 ```
 [INFO 2025-06-06 18:57:58,011 utils.py:50] Core ATen graph:
@@ -79,7 +69,7 @@ Range constraints: {}
 [INFO 2025-06-06 18:57:58,180 utils.py:141] Saved exported program to ./add.pte
 ```
 
-and `add.pte` will be created under `/executorch/`
+and `add.pte` will be created under `/home/zephyruser/executorch/`
 
 ```
 ./cmake-out/executor_runner --model_path add.pte
@@ -97,10 +87,10 @@ I 00:00:00.006604 executorch:executor_runner.cpp:293] 1 outputs:
 Output 0: tensor(sizes=[1], [2.])
 ```
 
-# Setup  arm FVP in the Docker image
+# Setup arm FVP in the Docker image
 
 ```
-cd /executorch
+cd /home/zephyruser/executorch
 ```
 
 Now run
