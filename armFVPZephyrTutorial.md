@@ -12,7 +12,7 @@ The docker image can be accessed by either building the image directly from the 
 ## Building the image locally
 
 ```
-docker build -t env-zephyr-armfvp:v5 -f Dockerfile.armfvp_zephyr  .
+docker build -t rselagam/env-zephyr-armfvp:v5 -f Dockerfile.armfvp_zephyr  .
 ```
 
 ## (Recommended) Pulling the image from Docker hub

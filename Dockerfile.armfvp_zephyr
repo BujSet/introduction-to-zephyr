@@ -48,13 +48,13 @@ RUN apt install --no-install-recommends -y ccache \
     net-tools
 
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
-        apt install --no-install-recommends -y gcc-multilib g++-multilib \
+        apt install --no-install-recommends -y gcc-multilib g++-multilib; \
     fi
 
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
-    apt install --no-install-recommends -y libc6-amd64-cross \
-    ln -s /usr/x86_64-linux-gnu/lib64/ /lib64 \
-    export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/lib64:/usr/x86_64-linux-gnu/lib" \
+    apt install --no-install-recommends -y libc6-amd64-cross; \
+    ln -s /usr/x86_64-linux-gnu/lib64/ /lib64; \
+    export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/lib64:/usr/x86_64-linux-gnu/lib"; \
 fi
 
 ENV VIRTUAL_ENV=${VIRTUAL_ENV}
