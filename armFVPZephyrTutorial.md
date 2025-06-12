@@ -7,34 +7,32 @@ This tutorial was written based running on a Windows machine, but should work fo
 
 # Accesssing Docker Image:
 
-The docker image can be accessed by either building the image directly from the Dockerfile source file, or by pulling the image down (recommended). In either case, the docker image requires *at least* 7 GB of disk space. If using windows, it's highly recommended to manage your docker artifacts with Docker Desktop.
+The docker image can be accessed by either building the image directly from the Dockerfile source file, or by pulling the image down (recommended). In either case, the docker image requires *at least* 40 GB of disk space. If using windows, it's highly recommended to manage your docker artifacts with Docker Desktop.
 
 ## Building the image locally
 
 ```
-docker build -t env-zephyr-armfvp:v3 -f Dockerfile.armfvp_zephyr .
+docker build -t env-zephyr-armfvp:v5 -f Dockerfile.armfvp_zephyr_win64  .
 ```
 
-## (Recommendde) Pulling the image from Docker hub
+## (Recommended) Pulling the image from Docker hub
 
 ```
-docker pull rselagam/env-zephyr-armfvp:v3
+docker pull rselagam/env-zephyr-armfvp:v5
 ```
-
 
 # Run docker image interactivately
-
 
 ## Linux/macOS
 
 ```
-docker run --rm -it --entrypoint /bin/bash  -p 3333:3333 -p 2222:22 -p 8800:8800 -v "$(pwd)"/workspace:/workspace -w /workspace rselagam/env-zephyr-armfvp:v3
+docker run --rm -it --entrypoint /bin/bash  --net=host -v "$(pwd)"/workspace:/workspace -w /workspace rselagam/env-zephyr-armfvp:v5
 ```
 
 ## Windows (PowerShell)
 
 ```
-docker run --rm -it --entrypoint /bin/bash  -p 3333:3333 -p 2222:22 -p 8800:8800 -v "${PWD}\workspace:/workspace" -w /workspace rselagam/env-zephyr-armfvp:v3
+docker run --rm -it --entrypoint /bin/bash --net=host -v "${PWD}\workspace:/workspace" -w /workspace rselagam/env-zephyr-armfvp:v5
 ```
 
 ## (Optional) Test your executorch installation:
@@ -49,24 +47,9 @@ python -m examples.portable.scripts.export --model_name="add"
 You should see the following output:
 
 ```
-[INFO 2025-06-06 18:57:58,011 utils.py:50] Core ATen graph:
-graph():
-    %x : [num_users=1] = placeholder[target=x]
-    %y : [num_users=1] = placeholder[target=y]
-    %add : [num_users=1] = call_function[target=torch.ops.aten.add.Tensor](args = (%x, %y), kwargs = {})
-    return (add,)
-[INFO 2025-06-06 18:57:58,137 utils.py:70] Exported graph:
-ExportedProgram:
-    class GraphModule(torch.nn.Module):
-        def forward(self, x: "f32[1]", y: "f32[1]"):
-             # File: /executorch/examples/models/toy_model/model.py:47 in forward, code: z = x + y
-            aten_add_tensor: "f32[1]" = executorch_exir_dialects_edge__ops_aten_add_Tensor(x, y);  x = y = None
-            return (aten_add_tensor,)
-
-Graph signature: ExportGraphSignature(input_specs=[InputSpec(kind=<InputKind.USER_INPUT: 1>, arg=TensorArgument(name='x'), target=None, persistent=None), InputSpec(kind=<InputKind.USER_INPUT: 1>, arg=TensorArgument(name='y'), target=None, persistent=None)], output_specs=[OutputSpec(kind=<OutputKind.USER_OUTPUT: 1>, arg=TensorArgument(name='aten_add_tensor'), target=None)])
-Range constraints: {}
-
-[INFO 2025-06-06 18:57:58,180 utils.py:141] Saved exported program to ./add.pte
+WARNING:torchao.kernel.intmm:Warning: Detected no triton, on systems without Triton certain kernels will not work
+/home/zephyruser/executorch/.venv/lib/python3.10/site-packages/executorch/exir/dialects/edge/_ops.py:9: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
 ```
 
 and `add.pte` will be created under `/home/zephyruser/executorch/`
@@ -91,28 +74,7 @@ Output 0: tensor(sizes=[1], [2.])
 
 ```
 cd /home/zephyruser/executorch
-```
-
-Now run
-
-```
-./examples/arm/setup.sh --i-agree-to-the-contained-eula
-```
-
-This will fail with the error below:
-
-```
-ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
-tosa-tools 0.80.2.dev1+g70ed0b4 requires jsonschema, which is not installed.
-tosa-tools 0.80.2.dev1+g70ed0b4 requires flatbuffers==23.5.26, but you have flatbuffers 24.12.23 which is incompatible.
-tosa-tools 0.80.2.dev1+g70ed0b4 requires numpy<2, but you have numpy 2.2.6 which is incompatible.
-```
-
-But now the path setup script is available, so you can run the follwing commands to comeplete the setup process:
-
-```
 source  examples/arm/ethos-u-scratch/setup_path.sh
-./examples/arm/setup.sh --i-agree-to-the-contained-eula
 ```
 ## Verify Arm toolcahin:
 
@@ -191,4 +153,57 @@ Info: /OSCI/SystemC: Simulation stopped by user.
 Checking for problems in log:
 No problems found!
 + set +x
+```
+
+
+# Running the Zephyr hello world
+
+## (Optional) Building the elf
+The project elf should already be built, but you can rebuild with the following if necessary:
+
+```
+cd /home/zephyruser/zephyrproject/zephyr
+rm -rf build
+west build -p auto -b mps3/corstone300/an547 samples/hello_world
+```
+
+## Flashing the FVP Simulator
+
+```
+cd /home/zephyruser/zephyrproject/zephyr
+FVP_Corstone_SSE-300_Ethos-U55 -a build/zephyr/zephyr.elf -C mps3_board.visualisation.disable-visualisation=1 -C mps3_board.telnetterminal0.start_telnet=0 -C mps3_board.uart0.out_file='-' --simlimit 30
+```
+
+You should see output that looks like:
+
+```
+telnetterminal0: Listening for serial connection on port 5000
+telnetterminal1: Listening for serial connection on port 5001
+telnetterminal2: Listening for serial connection on port 5002
+telnetterminal5: Listening for serial connection on port 5003
+
+    Ethos-U rev 136b7d75 --- Apr 12 2023 13:44:01
+    (C) COPYRIGHT 2019-2023 Arm Limited
+    ALL RIGHTS RESERVED
+
+*** Booting Zephyr OS build v4.1.0-5715-gd2a5c1ca82f0 ***
+Hello World! mps3/corstone300/an547
+xterm: xterm: Xt error: Can't open display:
+Xt error: Can't open display:
+xterm: DISPLAY is not set
+xterm: DISPLAY is not set
+
+Info: Simulation is stopping. Reason: Simulated time has been exceeded.
+
+Info: /OSCI/SystemC: Simulation stopped by user.
+[warning ][main@0][01 ns] Simulation stopped by user
+```
+
+# TODOs
+Need to build the image to work on different platforms, following commands may help
+
+```
+docker build --platform linux/amd64,linux/arm64,windows/amd64 -t env-zephyr-armfvp:v3 -f Dockerfile.armfvp_zephyr  .
+docker build --platform windows/amd64 -t env-zephyr-armfvp-win64:v3 -f Dockerfile.armfvp_zephyr_win64  .
+docker build --platform linux/arm64 -t env-zephyr-armfvp-arm64:v3 -f Dockerfile.armfvp_zephyr_arm64  .
 ```
