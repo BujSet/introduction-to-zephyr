@@ -4,6 +4,7 @@ FROM ubuntu:22.04
 SHELL ["/bin/bash", "-c"]
 ARG VIRTUAL_ENV
 ARG PASSWORD
+ARG TARGETARCH
 
 ENV DEBIAN_FRONTEND=noninteractive
 
