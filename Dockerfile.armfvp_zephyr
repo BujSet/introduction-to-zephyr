@@ -1,7 +1,10 @@
 ARG VIRTUAL_ENV=/opt/venv
+ARG PASSWORD="zephyr"
 FROM ubuntu:22.04
 SHELL ["/bin/bash", "-c"]
 ARG VIRTUAL_ENV
+ARG PASSWORD
+ARG TARGETARCH
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -37,11 +40,22 @@ RUN apt install --no-install-recommends -y ccache \
     python3-wheel \
     make \
     gcc \
-    gcc-multilib \
-    g++-multilib \
+
     libsdl2-dev \
     libmagic1 \
-    xterm
+    xterm \
+    telnet \
+    net-tools
+
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+        apt install --no-install-recommends -y gcc-multilib g++-multilib \
+    fi
+
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+    apt install --no-install-recommends -y libc6-amd64-cross \
+    ln -s /usr/x86_64-linux-gnu/lib64/ /lib64 \
+    export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/lib64:/usr/x86_64-linux-gnu/lib" \
+fi
 
 ENV VIRTUAL_ENV=${VIRTUAL_ENV}
 RUN python3 -m venv ${VIRTUAL_ENV}
@@ -64,6 +78,7 @@ USER zephyruser
 # Download and install executorch
 RUN cd /home/zephyruser && git clone https://github.com/BujSet/executorch.git && \
     cd executorch && \
+    # git switch -c arm-zphyr-eabi origin/arm-zphyr-eabi && \
     python3 -m venv .venv && \
     source .venv/bin/activate && \
     python3 -m pip install --upgrade pip && \
@@ -80,42 +95,33 @@ RUN cd /home/zephyruser/ && wget https://apt.kitware.com/kitware-archive.sh && \
     ./kitware-archive.sh
 
 USER zephyruser
-## Install arm FVP, run commands as root but later need them be run by user mode... TODO need to fix this
+RUN cd /home/zephyruser/ && \
+    wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.0/zephyr-sdk-0.16.0_linux-x86_64.tar.xz && \
+    tar -xf zephyr-sdk-0.16.0_linux-x86_64.tar.xz
 
-#RUN cd /home/zephyruser/executorch && \
-#    source .venv/bin/activate && \
-#    ./examples/arm/setup.sh --i-agree-to-the-contained-eula && \
-#    source  examples/arm/ethos-u-scratch/setup_path.sh && \
-#    ./examples/arm/setup.sh --i-agree-to-the-contained-eula
+# Install zephyr SDK, must be run as non-root user
+USER zephyruser
+RUN cd /home/zephyruser/ && \
+    mkdir zephyrproject && \
+    source /home/zephyruser/executorch/.venv/bin/activate && \
+    pip install west && \
+    west init zephyrproject && \
+    cd zephyrproject && \
+    west update && \
+    west zephyr-export && \
+    pip install -r zephyr/scripts/requirements.txt && \
+    cd zephyr && \
+    west build -p auto -b mps3/corstone300/an547 samples/hello_world
 
-# Corstone executable must be built and non-root users
-
-# Install required software to build zephyr
-#RUN cd /home/zephyruser/ && wget https://apt.kitware.com/kitware-archive.sh && \
-#    chmod +x kitware-archive.sh && \
-#    ./kitware-archive.sh && \
-#    mkdir zephyrproject && \
-#    python3 -m venv zephyrproject/.venv && \
-#    source zephyrproject/.venv/bin/activate && \
-#    pip install west && \
-#    west init zephyrproject && \
-#    cd zephyrproject && \
-#    west update && \
-#    west zephyr-export && \
-#    pip install -r zephyr/scripts/requirements.txt && \
-#    cd /home/zephyruser/ && \
-#    wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.0/zephyr-sdk-0.16.0_linux-x86_64.tar.xz && \
-#    tar -xf zephyr-sdk-0.16.0_linux-x86_64.tar.xz && \
-#    cd zephyr-sdk-0.16.0 && \
-#    ./setup.sh -c -t arm-zephyr-eabi # && \
-#    cd /home/zephyruser/executorch && \
-#    ./examples/arm/setup.sh --i-agree-to-the-contained-eula && \
-#    source  examples/arm/ethos-u-scratch/setup_path.sh && \
-#    ./examples/arm/setup.sh --i-agree-to-the-contained-eula
-
-#&& \
-#    cd /home/zephyruser/zephyrproject/zephyr && \
-#    west build -p auto -b mps3/corstone300/an547 samples/hello_world
+# Install arm FVP, must be run as non-root user
+USER zephyruser
+RUN cd /home/zephyruser/executorch && \
+    source .venv/bin/activate && \
+    git config --global user.email "zephyruser@gmail.com" && \
+    git config --global user.name "ZephyrUser" && \
+    ./examples/arm/setup.sh --i-agree-to-the-contained-eula && \
+    source  examples/arm/ethos-u-scratch/setup_path.sh && \
+    ./examples/arm/setup.sh --i-agree-to-the-contained-eula
 
 ENV ZEPHYR_TOOLCHAIN_VARIANT=zephyr
 ENV ZEPHYR_SDK_INSTALL_DIR=/home/zephyruser/zephyr-sdk-0.16.0

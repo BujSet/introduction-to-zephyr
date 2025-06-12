@@ -12,7 +12,7 @@ The docker image can be accessed by either building the image directly from the 
 ## Building the image locally
 
 ```
-docker build -t env-zephyr-armfvp:v5 -f Dockerfile.armfvp_zephyr_win64  .
+docker build -t env-zephyr-armfvp:v5 -f Dockerfile.armfvp_zephyr  .
 ```
 
 ## (Recommended) Pulling the image from Docker hub
@@ -204,6 +204,6 @@ Need to build the image to work on different platforms, following commands may h
 
 ```
 docker build --platform linux/amd64,linux/arm64,windows/amd64 -t env-zephyr-armfvp:v3 -f Dockerfile.armfvp_zephyr  .
-docker build --platform windows/amd64 -t env-zephyr-armfvp-win64:v3 -f Dockerfile.armfvp_zephyr_win64  .
-docker build --platform linux/arm64 -t env-zephyr-armfvp-arm64:v3 -f Dockerfile.armfvp_zephyr_arm64  .
+docker build --platform windows/amd64 -t env-zephyr-armfvp-win64:v3 -f Dockerfile.armfvp_zephyr  .
+docker build --platform linux/arm64 -t env-zephyr-armfvp-arm64:v3 -f Dockerfile.armfvp_zephyr  .
 ```
