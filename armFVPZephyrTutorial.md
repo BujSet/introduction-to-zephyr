@@ -207,3 +207,17 @@ docker build --platform linux/amd64,linux/arm64,windows/amd64 -t env-zephyr-armf
 docker build --platform windows/amd64 -t env-zephyr-armfvp-win64:v3 -f Dockerfile.armfvp_zephyr  .
 docker build --platform linux/arm64 -t env-zephyr-armfvp-arm64:v3 -f Dockerfile.armfvp_zephyr  .
 ```
+
+# Building Executorch with arm Zephyr Toolchain
+
+In the docker image, with the old venv sourced:
+
+```
+cd /workspace/
+git clone https://github.com/BujSet/executorch.git
+cd executorch
+git switch -c arm-zphyr-eabi origin/arm-zphyr-eabi
+git pull
+export PATH=${PATH}:/home/zephyruser/zephyr-sdk-0.16.0/arm-zephyr-eabi/bin
+CMAKE_ARGS="-DCMAKE_TOOLCHAIN_FILE=/workspace/executorch/examples/arm/ethos-u-setup/arm-zephyr-eabi-gcc.cmake" ./install_executorch.sh
+```
