@@ -116,6 +116,7 @@ RUN cd /home/zephyruser/zephyrproject && \
 
 RUN cd /home/zephyruser/zephyrproject/zephyr && \
     source /home/zephyruser/executorch/.venv/bin/activate && \
+    if [ "$TARGETARCH" = "arm64" ]; then export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/lib64:/usr/x86_64-linux-gnu/lib"; fi && \
     west build -p auto -b mps3/corstone300/an547 samples/hello_world
 
 # Install arm FVP, must be run as non-root user
