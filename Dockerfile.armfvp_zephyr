@@ -40,7 +40,6 @@ RUN apt install --no-install-recommends -y ccache \
     python3-wheel \
     make \
     gcc \
-
     libsdl2-dev \
     libmagic1 \
     xterm \
@@ -102,15 +101,21 @@ RUN cd /home/zephyruser/ && \
 # Install zephyr SDK, must be run as non-root user
 USER zephyruser
 RUN cd /home/zephyruser/ && \
-    mkdir zephyrproject && \
     source /home/zephyruser/executorch/.venv/bin/activate && \
     pip install west && \
-    west init zephyrproject && \
-    cd zephyrproject && \
+    west init zephyrproject
+
+RUN cd /home/zephyruser/zephyrproject && \
+    source /home/zephyruser/executorch/.venv/bin/activate && \
     west update && \
-    west zephyr-export && \
-    pip install -r zephyr/scripts/requirements.txt && \
-    cd zephyr && \
+    west zephyr-export
+
+RUN cd /home/zephyruser/zephyrproject && \
+    source /home/zephyruser/executorch/.venv/bin/activate && \
+    pip install -r zephyr/scripts/requirements.txt
+
+RUN cd /home/zephyruser/zephyrproject/zephyr && \
+    source /home/zephyruser/executorch/.venv/bin/activate && \
     west build -p auto -b mps3/corstone300/an547 samples/hello_world
 
 # Install arm FVP, must be run as non-root user
