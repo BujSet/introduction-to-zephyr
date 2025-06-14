@@ -219,5 +219,6 @@ cd executorch
 git switch -c arm-zphyr-eabi origin/arm-zphyr-eabi
 git pull
 export PATH=${PATH}:/home/zephyruser/zephyr-sdk-0.16.0/arm-zephyr-eabi/bin
+bash test/build_size_test.sh
 CMAKE_ARGS="-DCMAKE_TOOLCHAIN_FILE=/workspace/executorch/examples/arm/ethos-u-setup/arm-zephyr-eabi-gcc.cmake" ./install_executorch.sh
 ```
