@@ -213,12 +213,16 @@ docker build --platform linux/arm64 -t env-zephyr-armfvp-arm64:v3 -f Dockerfile.
 In the docker image, with the old venv sourced:
 
 ```
-cd /workspace/
-git clone https://github.com/BujSet/executorch.git
-cd executorch
+cd /home/zephyruser/executorch
+source .venv/bin/activate
 git switch -c arm-zphyr-eabi origin/arm-zphyr-eabi
-git pull
+./install_executorch.sh && \
+    git submodule sync && \
+    git submodule update --init --recursive && \
+    mkdir cmake-out && cd cmake-out && cmake .. && cd ../ && \
+    cmake --build cmake-out -j9
 export PATH=${PATH}:/home/zephyruser/zephyr-sdk-0.16.0/arm-zephyr-eabi/bin
 bash test/build_size_test.sh
-CMAKE_ARGS="-DCMAKE_TOOLCHAIN_FILE=/workspace/executorch/examples/arm/ethos-u-setup/arm-zephyr-eabi-gcc.cmake" ./install_executorch.sh
+python3 -m examples.arm.aot_arm_compiler --model_name="add" --delegate
+python3 -m examples.arm.aot_arm_compiler --model_name="add" --delegate --quantize
 ```
