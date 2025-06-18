@@ -231,6 +231,7 @@ cmake --build cmake-out -j10 --target executor_runner
 python3 -m examples.arm.aot_arm_compiler --model_name="add"
 python3 -m examples.arm.aot_arm_compiler --model_name="add" --quantize
 python3 -m examples.arm.aot_arm_compiler --model_name="mv3"
+FVP_Corstone_SSE-300_Ethos-U55 -a cmake-out/executor_runner -C mps3_board.visualisation.disable-visualisation=1 -C mps3_board.telnetterminal0.start_telnet=0 -C mps3_board.uart0.out_file='-' --simlimit 30
 ```
 
 
