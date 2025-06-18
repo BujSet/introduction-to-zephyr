@@ -216,13 +216,44 @@ In the docker image, with the old venv sourced:
 cd /home/zephyruser/executorch
 source .venv/bin/activate
 git switch -c arm-zphyr-eabi origin/arm-zphyr-eabi
+git pull --rebase
 ./install_executorch.sh && \
     git submodule sync && \
     git submodule update --init --recursive && \
     mkdir cmake-out && cd cmake-out && cmake .. && cd ../ && \
     cmake --build cmake-out -j9
 export PATH=${PATH}:/home/zephyruser/zephyr-sdk-0.16.0/arm-zephyr-eabi/bin
-bash test/build_size_test.sh
-python3 -m examples.arm.aot_arm_compiler --model_name="add" --delegate
-python3 -m examples.arm.aot_arm_compiler --model_name="add" --delegate --quantize
+./examples/arm/setup.sh --i-agree-to-the-contained-eula --skip-toolchain-setup
+source /home/zephyruser/executorch/examples/arm/ethos-u-scratch/setup_path.sh
+./examples/arm/setup.sh --i-agree-to-the-contained-eula --skip-toolchain-setup
+cmake --preset zephyr
+cmake --build cmake-out -j10 --target executor_runner
+python3 -m examples.arm.aot_arm_compiler --model_name="add"
+python3 -m examples.arm.aot_arm_compiler --model_name="add" --quantize
+python3 -m examples.arm.aot_arm_compiler --model_name="mv3"
 ```
+
+
+
+
+git config --global user.email "ranganath1000@gmail.com" && \
+git config --global user.name "BujSet"
+
+cd /home/zephyruser/
+git clone https://github.com/BujSet/executorch.git
+cd executorch
+git switch -c arm-zphyr-eabi origin/arm-zphyr-eabi
+git pull --rebase
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install --upgrade pip && \
+    ./install_requirements.sh && \
+    git submodule sync && \
+    git submodule update --init --recursive
+
+export PATH=${PATH}:/home/zephyruser/zephyr-sdk-0.16.0/arm-zephyr-eabi/bin
+./examples/arm/setup.sh --i-agree-to-the-contained-eula --skip-toolchain-setup
+source /home/zephyruser/executorch/examples/arm/ethos-u-scratch/setup_path.sh
+./examples/arm/setup.sh --i-agree-to-the-contained-eula --skip-toolchain-setup
+cmake --preset zephyr
+cmake --build cmake-out -j10 --target executor_runner
