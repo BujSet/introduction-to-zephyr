@@ -1,6 +1,7 @@
 ARG VIRTUAL_ENV=/opt/venv
 ARG PASSWORD="zephyr"
-FROM ubuntu:22.04
+ARG BASE_IMAGE=ubuntu:22.04
+FROM ${BASE_IMAGE}
 SHELL ["/bin/bash", "-c"]
 ARG VIRTUAL_ENV
 ARG PASSWORD
@@ -8,29 +9,38 @@ ARG TARGETARCH
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get -y update && \
-        apt-get install --no-install-recommends -y \
-        dos2unix \
-        ca-certificates \
-        file \
-        locales \
-        git \
-        build-essential \
-        cmake \
-        ninja-build gperf \
-        device-tree-compiler \
-        wget \
-        curl \
-        python3 \
-        python3-dev \
-        python3-pip \
-        python3-venv \
-        xz-utils \
-        dos2unix \
-        vim \
-        nano \
-        mc \
-        openssh-server
+RUN rm /var/lib/dpkg/info/libc-bin.*
+RUN apt-get clean
+RUN apt-get -y update
+RUN apt-get install -y libc-bin
+
+RUN apt-get -y update
+RUN apt-get clean
+RUN apt-get install --no-install-recommends -y dos2unix
+RUN apt-get install --no-install-recommends -y ca-certificates
+RUN apt-get install -y --reinstall libc-bin
+RUN apt-get install --no-install-recommends -y file
+RUN apt-get install --no-install-recommends -y locales
+RUN apt-get install --no-install-recommends -y git
+RUN apt-get install --no-install-recommends -y build-essential
+RUN apt-get install --no-install-recommends -y cmake
+RUN apt-get install --no-install-recommends -y ninja-build gperf
+RUN apt-get install --no-install-recommends -y device-tree-compiler
+RUN apt-get install --no-install-recommends -y wget
+RUN apt-get install --no-install-recommends -y curl
+RUN apt-get install --no-install-recommends -y xz-utils
+RUN apt-get install --no-install-recommends -y dos2unix
+RUN apt-get install --no-install-recommends -y vim
+RUN apt-get install --no-install-recommends -y nano
+RUN apt-get install --no-install-recommends -y mc
+RUN apt-get install --no-install-recommends -y openssh-server
+
+# Zephyr SDK relies on python 3.12
+RUN apt install software-properties-common -y
+RUN add-apt-repository ppa:deadsnakes/ppa -y
+RUN apt update
+RUN apt install -y python3.12 python3.12-dev python3.12-venv python3-pip
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
 
 # Install additional required software for Zephyr
 RUN apt install --no-install-recommends -y ccache \
@@ -68,7 +78,6 @@ RUN apt-get clean -y && \
         apt-get autoremove --purge -y && \
         rm -rf /var/lib/apt/lists/*
 
-
 # Create a non-root user and group
 RUN useradd -d /home/zephyruser -m -s /bin/bash zephyruser
 # Switch to the non-root user
@@ -77,17 +86,14 @@ USER zephyruser
 # Download and install executorch
 RUN cd /home/zephyruser && git clone https://github.com/BujSet/executorch.git && \
     cd executorch && \
-    # git switch -c arm-zphyr-eabi origin/arm-zphyr-eabi && \
+    git switch -c arm-zphyr-eabi origin/arm-zphyr-eabi && \
+    git pull --rebase && \
     python3 -m venv .venv && \
     source .venv/bin/activate && \
     python3 -m pip install --upgrade pip && \
-    ./install_executorch.sh && \
-    git submodule sync && \
-    git submodule update --init --recursive && \
-    mkdir cmake-out && cd cmake-out && cmake .. && cd ../ && \
-    cmake --build cmake-out -j9
+    ./install_executorch.sh
 
-# kitware script must be run as root user for some reason
+# kitware script must be run as root user
 USER root
 RUN cd /home/zephyruser/ && wget https://apt.kitware.com/kitware-archive.sh && \
     chmod +x kitware-archive.sh && \
@@ -117,20 +123,28 @@ RUN cd /home/zephyruser/zephyrproject && \
     source /home/zephyruser/executorch/.venv/bin/activate && \
     pip install -r zephyr/scripts/requirements.txt
 
-RUN cd /home/zephyruser/zephyrproject/zephyr && \
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+    cd /home/zephyruser/zephyrproject/zephyr && \
     source /home/zephyruser/executorch/.venv/bin/activate && \
-    if [ "$TARGETARCH" = "arm64" ]; then export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/lib64:/usr/x86_64-linux-gnu/lib"; fi && \
-    west build -p auto -b mps3/corstone300/an547 samples/hello_world
+    export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/lib64:/usr/x86_64-linux-gnu/lib" && \
+    west build -p auto -b mps3/corstone300/an547 samples/hello_world; \
+fi
+
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+    cd /home/zephyruser/zephyrproject/zephyr && \
+    source /home/zephyruser/executorch/.venv/bin/activate && \
+    west build -p auto -b mps3/corstone300/an547 samples/hello_world; \
+fi
 
 # Install arm FVP, must be run as non-root user
-USER zephyruser
-RUN cd /home/zephyruser/executorch && \
-    source .venv/bin/activate && \
-    git config --global user.email "zephyruser@gmail.com" && \
-    git config --global user.name "ZephyrUser" && \
-    ./examples/arm/setup.sh --i-agree-to-the-contained-eula && \
-    source  examples/arm/ethos-u-scratch/setup_path.sh && \
-    ./examples/arm/setup.sh --i-agree-to-the-contained-eula
+# USER zephyruser
+# RUN cd /home/zephyruser/executorch && \
+#     source .venv/bin/activate && \
+#     git config --global user.email "zephyruser@gmail.com" && \
+#     git config --global user.name "ZephyrUser" && \
+#     ./examples/arm/setup.sh --i-agree-to-the-contained-eula && \
+#     source  examples/arm/ethos-u-scratch/setup_path.sh && \
+#     ./examples/arm/setup.sh --i-agree-to-the-contained-eula
 
 ENV ZEPHYR_TOOLCHAIN_VARIANT=zephyr
 ENV ZEPHYR_SDK_INSTALL_DIR=/home/zephyruser/zephyr-sdk-0.16.0

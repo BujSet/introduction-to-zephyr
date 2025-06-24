@@ -3,7 +3,7 @@ https://learn.arm.com/learning-paths/embedded-and-microcontrollers/zephyr/zephyr
 
 # Hardware Requirements:
 
-This tutorial was written based running on a Windows machine, but should work for others.
+The docker image used here now supports running on both arm64 and amd64 architectures for Linux.
 
 # Accesssing Docker Image:
 
@@ -12,13 +12,13 @@ The docker image can be accessed by either building the image directly from the 
 ## Building the image locally
 
 ```
-docker build -t rselagam/env-zephyr-armfvp:v5 -f Dockerfile.armfvp_zephyr  .
+docker build -t rselagam/zephyr-armfvp:v1 -f Dockerfile.armfvp_zephyr  .
 ```
 
 ## (Recommended) Pulling the image from Docker hub
 
 ```
-docker pull rselagam/env-zephyr-armfvp:v5
+docker pull rselagam/zephyr-armfvp:v1
 ```
 
 # Run docker image interactivately
@@ -26,13 +26,13 @@ docker pull rselagam/env-zephyr-armfvp:v5
 ## Linux/macOS
 
 ```
-docker run --rm -it --entrypoint /bin/bash  --net=host -v "$(pwd)"/workspace:/workspace -w /workspace rselagam/env-zephyr-armfvp:v5
+docker run --rm -it --entrypoint /bin/bash  --net=host -v "$(pwd)"/workspace:/workspace -w /workspace rselagam/zephyr-armfvp:v1
 ```
 
 ## Windows (PowerShell)
 
 ```
-docker run --rm -it --entrypoint /bin/bash --net=host -v "${PWD}\workspace:/workspace" -w /workspace rselagam/env-zephyr-armfvp:v5
+docker run --rm -it --entrypoint /bin/bash --net=host -v "${PWD}\workspace:/workspace" -w /workspace rselagam/zephyr-armfvp:v1
 ```
 
 ## (Optional) Test your executorch installation:
@@ -203,9 +203,15 @@ Info: /OSCI/SystemC: Simulation stopped by user.
 Need to build the image to work on different platforms, following commands may help
 
 ```
-docker build --platform linux/amd64,linux/arm64,windows/amd64 -t env-zephyr-armfvp:v3 -f Dockerfile.armfvp_zephyr  .
+docker build --build-arg BASE_IMAGE=ubuntu:22.04 --no-cache --platform linux/amd64,linux/arm64,windows/amd64 -t env-zephyr-armfvp:v6 -f Dockerfile.armfvp_zephyr  .
+docker build --build-arg BASE_IMAGE=arm64v8/ubuntu:22.04 --no-cache --platform linux/arm64 -t env-zephyr-armfvp-linux-arm64:v6 -f Dockerfile.armfvp_zephyr  .
 docker build --platform windows/amd64 -t env-zephyr-armfvp-win64:v3 -f Dockerfile.armfvp_zephyr  .
 docker build --platform linux/arm64 -t env-zephyr-armfvp-arm64:v3 -f Dockerfile.armfvp_zephyr  .
+
+docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+docker run --privileged --rm tonistiigi/binfmt --install all
+docker buildx create --name mybuilder --driver docker-container --platform linux/amd64,linux/arm6 --use
+docker buildx build --network=host --platform linux/amd64,linux/arm64 -t rselagam/zephyr-armfvp:v1 --push -f Dockerfile.armfvp_zephyr  .
 ```
 
 # Building Executorch with arm Zephyr Toolchain
@@ -228,8 +234,8 @@ source /home/zephyruser/executorch/examples/arm/ethos-u-scratch/setup_path.sh
 ./examples/arm/setup.sh --i-agree-to-the-contained-eula --skip-toolchain-setup
 cmake --preset zephyr
 cmake --build cmake-out -j10 --target executor_runner
-python3 -m examples.arm.aot_arm_compiler --model_name="add"
 python3 -m examples.arm.aot_arm_compiler --model_name="add" --quantize
+python3 -m examples.arm.aot_arm_compiler --model_name="add"
 python3 -m examples.arm.aot_arm_compiler --model_name="mv3"
 FVP_Corstone_SSE-300_Ethos-U55 -a cmake-out/executor_runner -C mps3_board.visualisation.disable-visualisation=1 -C mps3_board.telnetterminal0.start_telnet=0 -C mps3_board.uart0.out_file='-' -C cpu0.CFGITCMSZ=15 -C cpu0.CFGDTCMSZ=15 -C mps3_board.FPGA_SRAM_SIZE=2 --simlimit 600
 ```
@@ -258,3 +264,28 @@ source /home/zephyruser/executorch/examples/arm/ethos-u-scratch/setup_path.sh
 ./examples/arm/setup.sh --i-agree-to-the-contained-eula --skip-toolchain-setup
 cmake --preset zephyr
 cmake --build cmake-out -j10 --target executor_runner
+
+
+
+git config --global user.email "ranganath1000@gmail.com" && \
+git config --global user.name "BujSet"
+
+cd /home/zephyruser/
+git clone https://github.com/BujSet/executorch.git
+cd executorch
+git switch -c arm-zphyr-eabi origin/arm-zphyr-eabi
+git pull --rebase
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install --upgrade pip
+./install_executorch.sh --clean
+./install_executorch.sh
+
+./examples/arm/setup.sh --i-agree-to-the-contained-eula --skip-toolchain-setup
+source /home/zephyruser/executorch/examples/arm/ethos-u-scratch/setup_path.sh
+./examples/arm/setup.sh --i-agree-to-the-contained-eula --skip-toolchain-setup
+cmake --preset zephyr
+cmake --build cmake-out -j10 --target executor_runner
+
+cmake --preset zephyr
+examples/arm/run.sh --model_name=add --no_quantize --target=ethos-u55-128
